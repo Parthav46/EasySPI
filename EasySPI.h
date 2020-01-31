@@ -1,11 +1,9 @@
 #ifndef EASYSPI_EASYSPI_H
 #define EASYSPI_EASYSPI_H
 
-#include <stdint-gcc.h>
-#include "Arduino.h"
+#include <Arduino.h>
 #include "avr/interrupt.h"
-#include "avr/io.h"
-#include "SPI/src/SPI.h"
+#include <SPI.h>
 
 /** default pins for Arduino Uno. Pins defined in bootloader
  * MISO 12
@@ -14,22 +12,26 @@
 */
 enum SPIMode {MASTER, SLAVE};
 
-class EasySPISettings {
-public:
-    static SPIMode _spiMode;
-    static int read_available;
-    static int write_available;
-    static char* read_buffer;
-    static char* write_buffer;
-    static uint8_t SelctPin;
+struct EasySPISettings {
+    SPIMode _spiMode;
+    int read_available;
+    int write_available;
+    char* read_buffer;
+    char* write_buffer;
+    uint8_t SelctPin;
 };
+
+static EasySPISettings easySPISettings;
 
 class EasySPI {
 public:
     static void begin(SPIMode spiMode, uint8_t Select);
+    static void end();
     static int available();
     static char read();
     static void write(char c);
 };
+
+extern EasySPI EasySPI;
 
 #endif //EASYSPI_EASYSPI_H

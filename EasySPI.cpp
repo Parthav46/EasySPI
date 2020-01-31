@@ -1,13 +1,21 @@
 #include "EasySPI.h"
+#include <Arduino.h>
+#include "avr/interrupt.h"
+#include <SPI.h>
 
 void EasySPI::begin(SPIMode spiMode, uint8_t Select) {
-    EasySPISettings::SelctPin = Select;
-    EasySPISettings::_spiMode = spiMode;
+    easySPISettings.read_available = 0;
+    easySPISettings.write_available = 0;
+    easySPISettings.read_buffer = (char*) malloc(64 * sizeof(char));
+    easySPISettings.write_buffer = (char*) malloc(64 * sizeof(char));
+    easySPISettings.SelctPin = Select;
+    easySPISettings._spiMode = spiMode;
     if(spiMode == MASTER){
         pinMode(Select, OUTPUT);
         SPIClass::begin();
     } else {
         pinMode(Select, INPUT);
+        digitalWrite(Select, LOW);
         pinMode(SCK, INPUT);
         pinMode(MOSI, INPUT);
         pinMode(MISO, OUTPUT);
@@ -17,40 +25,49 @@ void EasySPI::begin(SPIMode spiMode, uint8_t Select) {
     }
 }
 
+void EasySPI::end() {
+    if(easySPISettings._spiMode == MASTER) SPI.end();
+    else SPI.detachInterrupt();
+}
+
 int EasySPI::available() {
-    if(EasySPISettings::_spiMode == MASTER) {
+    if(easySPISettings._spiMode == MASTER) {
         return 0;
     }
-    return EasySPISettings::read_available;
+    return easySPISettings.read_available;
 }
 
 char EasySPI::read() {
-    if(EasySPISettings::_spiMode == MASTER) {
-        return *(EasySPISettings::read_buffer);
+    if(easySPISettings._spiMode == MASTER) {
+        return *(easySPISettings.read_buffer);
     }
-    char ans = *(EasySPISettings::read_buffer);
-    EasySPISettings::read_buffer = EasySPISettings::read_buffer+1;
-    EasySPISettings::read_available --;
+    char ans = *(easySPISettings.read_buffer);
+    easySPISettings.read_buffer = easySPISettings.read_buffer+1;
+    easySPISettings.read_available --;
     return ans;
 }
 
 void EasySPI::write(char c) {
-    if(EasySPISettings::_spiMode == MASTER) {
-        *(EasySPISettings::read_buffer) = SPIClass::transfer(c);
+    if(easySPISettings._spiMode == MASTER) {
+        digitalWrite(easySPISettings.SelctPin, HIGH);
+        *(easySPISettings.read_buffer) = SPIClass::transfer(c);
+        digitalWrite(easySPISettings.SelctPin, LOW);
     }
-    *(EasySPISettings::write_buffer + EasySPISettings::write_available++) = c;
+    *(easySPISettings.write_buffer + easySPISettings.write_available++) = c;
 }
 
 ISR(SPI_STC_vect) {
-    if(EasySPISettings::_spiMode == SLAVE && digitalRead(EasySPISettings::SelctPin)) {
+    if(easySPISettings._spiMode == SLAVE) {
         // Reading SPI Data Register
-        *(EasySPISettings::read_buffer + EasySPISettings::read_available++) = SPDR;
+        *(easySPISettings.read_buffer + easySPISettings.read_available++) = SPDR;
 
         // Writing to SPI Data Register
-        if(EasySPISettings::write_available){
-            SPDR = *(EasySPISettings::write_buffer);
-            EasySPISettings::write_buffer = EasySPISettings::write_buffer + 1;
-            EasySPISettings::write_available--;
+        if(easySPISettings.write_available){
+            SPDR = *(easySPISettings.write_buffer);
+            easySPISettings.write_buffer = easySPISettings.write_buffer + 1;
+            easySPISettings.write_available--;
+        } else {
+            SPDR = 0x00;
         }
     }
 }
