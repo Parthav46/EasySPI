@@ -1,13 +1,8 @@
 #include "EasySPI.h"
 #include <Arduino.h>
-#include "avr/interrupt.h"
 #include <SPI.h>
 
 void EasySPI::begin(SPIMode spiMode, uint8_t Select) {
-    easySPISettings.read_available = 0;
-    easySPISettings.write_available = 0;
-    easySPISettings.read_buffer = (char*) malloc(64 * sizeof(char));
-    easySPISettings.write_buffer = (char*) malloc(64 * sizeof(char));
     easySPISettings.SelctPin = Select;
     easySPISettings._spiMode = spiMode;
     if(spiMode == MASTER){
@@ -34,40 +29,32 @@ int EasySPI::available() {
     if(easySPISettings._spiMode == MASTER) {
         return 0;
     }
-    return easySPISettings.read_available;
+    return easySPISettings.read_buffer.getLength();
 }
 
 char EasySPI::read() {
     if(easySPISettings._spiMode == MASTER) {
-        return *(easySPISettings.read_buffer);
+        return easySPISettings.read_buffer.remove();
     }
-    char ans = *(easySPISettings.read_buffer);
-    easySPISettings.read_buffer = easySPISettings.read_buffer+1;
-    easySPISettings.read_available --;
+    char ans = easySPISettings.read_buffer.remove();
     return ans;
 }
 
 void EasySPI::write(char c) {
     if(easySPISettings._spiMode == MASTER) {
         digitalWrite(easySPISettings.SelctPin, HIGH);
-        *(easySPISettings.read_buffer) = SPIClass::transfer(c);
+        easySPISettings.read_buffer.insert(SPIClass::transfer(c));
         digitalWrite(easySPISettings.SelctPin, LOW);
     }
-    *(easySPISettings.write_buffer + easySPISettings.write_available++) = c;
+    easySPISettings.write_buffer.insert(c);
 }
 
 ISR(SPI_STC_vect) {
     if(easySPISettings._spiMode == SLAVE) {
         // Reading SPI Data Register
-        *(easySPISettings.read_buffer + easySPISettings.read_available++) = SPDR;
+        easySPISettings.read_buffer.insert(SPDR);
 
         // Writing to SPI Data Register
-        if(easySPISettings.write_available){
-            SPDR = *(easySPISettings.write_buffer);
-            easySPISettings.write_buffer = easySPISettings.write_buffer + 1;
-            easySPISettings.write_available--;
-        } else {
-            SPDR = 0x00;
-        }
+        SPDR = easySPISettings.write_buffer.remove();
     }
 }

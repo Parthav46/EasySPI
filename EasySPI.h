@@ -2,7 +2,6 @@
 #define EASYSPI_EASYSPI_H
 
 #include <Arduino.h>
-#include "avr/interrupt.h"
 #include <SPI.h>
 
 /** default pins for Arduino Uno. Pins defined in bootloader
@@ -12,12 +11,57 @@
 */
 enum SPIMode {MASTER, SLAVE};
 
+class bufferNode {
+public:
+    char data;
+    bufferNode* next;
+};
+
+class BufferQueue {
+public:
+    BufferQueue() {
+        first = last = NULL;
+        length=0;
+    }
+
+    void insert(char data) {
+        bufferNode* current = new bufferNode();
+        current->data = data;
+        current->next = NULL;
+        if(length > 0) {
+            last->next = current;
+            last = current;
+        } else {
+            first = last = current;
+        }
+        length++;
+    }
+
+    char remove() {
+        char data = 0x00;
+        if(length > 0) {
+            data = first->data;
+            if(length > 1) {
+                first = first->next;
+            }
+            length--;
+        }
+        return data;
+    }
+
+    int getLength() {
+        return length;
+    }
+
+private:
+    bufferNode *first, *last;
+    int length;
+};
+
 struct EasySPISettings {
     SPIMode _spiMode;
-    int read_available;
-    int write_available;
-    char* read_buffer;
-    char* write_buffer;
+    BufferQueue read_buffer;
+    BufferQueue write_buffer;
     uint8_t SelctPin;
 };
 
