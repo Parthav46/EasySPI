@@ -10,9 +10,11 @@ void EasySPI::begin(SPIMode spiMode, uint8_t Select) {
         SPIClass::begin();
     } else {
         pinMode(Select, INPUT);
-        digitalWrite(Select, LOW);
+        digitalWrite(Select, HIGH);
         pinMode(SCK, INPUT);
+        digitalWrite(SCK, LOW);
         pinMode(MOSI, INPUT);
+        digitalWrite(MOSI, LOW);
         pinMode(MISO, OUTPUT);
 
         SPCR |= _BV(SPE);
@@ -42,9 +44,9 @@ char EasySPI::read() {
 
 void EasySPI::write(char c) {
     if(easySPISettings._spiMode == MASTER) {
-        digitalWrite(easySPISettings.SelctPin, HIGH);
-        easySPISettings.read_buffer.insert(SPIClass::transfer(c));
         digitalWrite(easySPISettings.SelctPin, LOW);
+        easySPISettings.read_buffer.insert(SPIClass::transfer(c));
+        digitalWrite(easySPISettings.SelctPin, HIGH);
     }
     easySPISettings.write_buffer.insert(c);
 }
