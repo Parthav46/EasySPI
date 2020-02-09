@@ -2,6 +2,9 @@
 #include <Arduino.h>
 #include <SPI.h>
 
+bufferNode** BufferQueue::usedList = (bufferNode**) malloc(10*sizeof(bufferNode**));
+int BufferQueue::usedLen = 0;
+
 void EasySPI::begin(SPIMode spiMode, uint8_t Select) {
     easySPISettings.SelctPin = Select;
     easySPISettings._spiMode = spiMode;

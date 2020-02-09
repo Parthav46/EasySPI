@@ -21,11 +21,16 @@ class BufferQueue {
 public:
     BufferQueue() {
         first = last = NULL;
-        length=0;
+        length = 0;
     }
 
     void insert(char data) {
-        bufferNode* current = new bufferNode();
+        bufferNode* current;
+        if(usedLen > 0){
+            current = (bufferNode*)*(usedList + usedLen);
+            usedLen--;
+        }
+        else current = new bufferNode();
         current->data = data;
         current->next = NULL;
         if(length > 0) {
@@ -42,6 +47,8 @@ public:
         if(length > 0) {
             data = first->data;
             if(length > 1) {
+                usedLen++;
+                *(usedList + usedLen) = first;
                 first = first->next;
             }
             length--;
@@ -54,15 +61,17 @@ public:
     }
 
 private:
-    bufferNode *first, *last;
+    static bufferNode **usedList;
+    static int usedLen ;
+    bufferNode *first{}, *last{};
     int length;
 };
 
 struct EasySPISettings {
-    SPIMode _spiMode;
+    SPIMode _spiMode = MASTER;
     BufferQueue read_buffer;
     BufferQueue write_buffer;
-    uint8_t SelctPin;
+    uint8_t SelctPin = 0x00;
 };
 
 static EasySPISettings easySPISettings;
